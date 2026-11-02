@@ -1,0 +1,65 @@
+name: Android Production Build
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    name: Build Secure Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Force Create Secure Expo App Files
+        run: |
+          if [ ! -f "package.json" ]; then
+            echo '{"name":"managed-security","version":"1.0.0","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.0","react-native":"0.74.1"},"devDependencies":{"@babel/core":"^7.20.0"}}' > package.json
+          fi
+          
+          if [ ! -f "app.json" ]; then
+            echo '{"expo":{"name":"Managed Security","slug":"managed-security","version":"1.0.0","android":{"package":"com.managedsecurity.app"},"plugins":[["expo-build-properties",{"android":{"enableProguardInReleaseBuilds":true,"usesCleartextTraffic":false}}]]}}' > app.json
+          fi
+
+      - name: Install Base Dependencies
+        run: npm install
+
+      - name: Install Secure Expo Modules Automatically
+        run: npx expo install expo-build-properties expo-secure-store -- --no-audit
+
+      - name: Prebuild Expo to Android Native
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Finalize Project Dependencies
+        run: npm install
+
+      - name: Grant Execute Permission for Gradle
+        run: chmod +x android/gradlew
+
+      - name: Build Production Release APK with R8 Obfuscation
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Upload Secure Production APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: managed-security-release-apk
+          path: |
+            **/android/app/build/outputs/apk/release/*.apk
+          retention-days: 7
