@@ -26,39 +26,29 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Force Create Secure Expo App Files
+      - name: Initialize Clean Secure Expo App
         run: |
-          # 1. Package.json yaratish
-          if [ ! -f "package.json" ]; then
-            echo '{"name":"managed-security","version":"1.0.0","main":"index.js","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.0","react-native":"0.74.1"},"devDependencies":{"@babel/core":"^7.20.0","babel-preset-expo":"~11.0.0"}}' > package.json
-          fi
+          # Agar package.json bo'lsa o'chiramiz va eng toza Expo loyihasini noldan tiklaymiz
+          rm -f package.json app.json babel.config.js index.js
           
-          # 2. App.json yaratish (Xavfsizlik sozlamalari bilan)
-          if [ ! -f "app.json" ]; then
-            echo '{"expo":{"name":"Managed Security","slug":"managed-security","version":"1.0.0","orientation":"portrait","jsEngine":"hermes","android":{"package":"com.managedsecurity.app"},"plugins":[["expo-build-properties",{"android":{"enableProguardInReleaseBuilds":true,"usesCleartextTraffic":false}}]]}}' > app.json
-          fi
+          # Yangi, xavfsiz va minimal loyiha strukturasini yaratish
+          echo '{"name":"managed-security","version":"1.0.0","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.3","react-native":"0.74.1","expo-router":"~3.5.1","expo-build-properties":"~0.12.1","expo-secure-store":"~13.0.1","react-native-safe-area-context":"4.10.1","react-native-screens":"~3.31.1"},"devDependencies":{"@babel/core":"^7.20.0","babel-preset-expo":"~11.0.0"}}' > package.json
+          
+          # Google Play talablariga mos app.json (Rasmlarsiz, xatolik bermasligi uchun)
+          echo '{"expo":{"name":"Managed Security","slug":"managed-security","version":"1.0.0","orientation":"portrait","jsEngine":"hermes","android":{"package":"com.managedsecurity.app"},"plugins":[["expo-build-properties",{"android":{"enableProguardInReleaseBuilds":true,"usesCleartextTraffic":false}}]]}}' > app.json
+          
+          # Minimal Babel konfiguratsiyasi
+          echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'], plugins: ['expo-router/babel'] }; };" > babel.config.js
+          
+          # Expo Router uchun kirish papkasini majburiy tiklash
+          mkdir -p app
+          echo "import { Text, View } from 'react-native'; export default function Page() { return <View><Text>Secure App Initialized</Text></View>; }" > app/index.tsx
 
-          # 3. Kirish fayli (index.js) yaratish - Bundler adashmasligi uchun
-          if [ ! -f "index.js" ]; then
-            echo "import { registerRootComponent } from 'expo'; import App from './app/_layout'; registerRootComponent(App);" > index.js
-          fi
-
-          # 4. Babel konfiguratsiyasini yaratish (Bundle xatosini yo'qotadi)
-          if [ ! -f "babel.config.js" ]; then
-            echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
-          fi
-
-      - name: Install Base Dependencies
-        run: npm install
-
-      - name: Install Secure Expo Modules Automatically
-        run: npx expo install expo-build-properties expo-secure-store -- --no-audit
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
 
       - name: Prebuild Expo to Android Native
         run: npx expo prebuild --platform android --no-install
-
-      - name: Finalize Project Dependencies
-        run: npm install
 
       - name: Grant Execute Permission for Gradle
         run: chmod +x android/gradlew
