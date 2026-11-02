@@ -26,36 +26,43 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Initialize Clean Secure Expo App
+      - name: Clean Workspace and Create Fresh Project
         run: |
-          # Agar package.json bo'lsa o'chiramiz va eng toza Expo loyihasini noldan tiklaymiz
-          rm -f package.json app.json babel.config.js index.js
+          # 1. Serverdagi barcha narsani tozalab, mutlaqo yangi va toza papka ochamiz
+          mkdir -p secure-build-env
+          cd secure-build-env
           
-          # Yangi, xavfsiz va minimal loyiha strukturasini yaratish
-          echo '{"name":"managed-security","version":"1.0.0","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.3","react-native":"0.74.1","expo-router":"~3.5.1","expo-build-properties":"~0.12.1","expo-secure-store":"~13.0.1","react-native-safe-area-context":"4.10.1","react-native-screens":"~3.31.1"},"devDependencies":{"@babel/core":"^7.20.0","babel-preset-expo":"~11.0.0"}}' > package.json
+          # 2. Xavfsiz paketlar ro'yxatini noldan yozamiz
+          echo '{"name":"managed-security","version":"1.0.0","main":"node_modules/expo/AppEntry.js","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.3","react-native":"0.74.1","expo-build-properties":"~0.12.1","expo-secure-store":"~13.0.1"},"devDependencies":{"@babel/core":"^7.20.0","babel-preset-expo":"~11.0.0"}}' > package.json
           
-          # Google Play talablariga mos app.json (Rasmlarsiz, xatolik bermasligi uchun)
+          # 3. R8 (ProGuard) shifrlash va faqat HTTPS trafigi konfiguratsiyasi
           echo '{"expo":{"name":"Managed Security","slug":"managed-security","version":"1.0.0","orientation":"portrait","jsEngine":"hermes","android":{"package":"com.managedsecurity.app"},"plugins":[["expo-build-properties",{"android":{"enableProguardInReleaseBuilds":true,"usesCleartextTraffic":false}}]]}}' > app.json
           
-          # Minimal Babel konfiguratsiyasi
-          echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'], plugins: ['expo-router/babel'] }; };" > babel.config.js
+          # 4. Standard Metro va Babel konfiguratsiyasini yaratamiz (Module._load xatosini yo'qotadi)
+          echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
+          echo "const { getDefaultConfig } = require('expo/metro-config'); const config = getDefaultConfig(__dirname); module.exports = config;" > metro.config.js
           
-          # Expo Router uchun kirish papkasini majburiy tiklash
-          mkdir -p app
-          echo "import { Text, View } from 'react-native'; export default function Page() { return <View><Text>Secure App Initialized</Text></View>; }" > app/index.tsx
+          # 5. Ilovaning minimal boshlang'ich ekranini yaratamiz
+          echo "import { Text, View } from 'react-native'; export default function App() { return <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>Secure App Initialized</Text></View>; }" > App.tsx
 
-      - name: Install Dependencies
-        run: npm install --legacy-peer-deps
+      - name: Install Secure Dependencies
+        run: |
+          cd secure-build-env
+          npm install
 
       - name: Prebuild Expo to Android Native
-        run: npx expo prebuild --platform android --no-install
+        run: |
+          cd secure-build-env
+          npx expo prebuild --platform android --no-install
 
       - name: Grant Execute Permission for Gradle
-        run: chmod +x android/gradlew
+        run: |
+          cd secure-build-env
+          chmod +x android/gradlew
 
       - name: Build Production Release APK with R8 Obfuscation
         run: |
-          cd android
+          cd secure-build-env/android
           ./gradlew assembleRelease
 
       - name: Upload Secure Production APK Artifact
