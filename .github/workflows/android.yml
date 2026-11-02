@@ -52,17 +52,16 @@ jobs:
       - name: Prebuild Expo to Android Native
         run: |
           cd secure-build-env
-          礼 expo prebuild --platform android --no-install
+          # Bu yerda xato tuzatildi: '礼' o'rniga 'npx' yozildi
+          npx expo prebuild --platform android --no-install
 
       - name: Fix Missing Android Colors Programmatically
         run: |
-          # prebuild yaratgan Android papkasi ichidagi splashscreen rangi xatosini majburiy tuzatamiz
           RES_DIR="secure-build-env/android/app/src/main/res/values"
           mkdir -p $RES_DIR
           if [ ! -f "$RES_DIR/colors.xml" ]; then
             echo '<?xml version="1.0" encoding="utf-8"?><resources><color name="splashscreen_background">#ffffff</color></resources>' > $RES_DIR/colors.xml
           else
-            # Agar mavjud bo'lsa, ichiga rangni qo'shib qo'yamiz
             sed -i '/<\/resources>/i <color name="splashscreen_background">#ffffff<\/color>' $RES_DIR/colors.xml
           fi
 
