@@ -28,12 +28,24 @@ jobs:
 
       - name: Force Create Secure Expo App Files
         run: |
+          # 1. Package.json yaratish
           if [ ! -f "package.json" ]; then
-            echo '{"name":"managed-security","version":"1.0.0","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.0","react-native":"0.74.1"},"devDependencies":{"@babel/core":"^7.20.0"}}' > package.json
+            echo '{"name":"managed-security","version":"1.0.0","main":"index.js","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.0","react-native":"0.74.1"},"devDependencies":{"@babel/core":"^7.20.0","babel-preset-expo":"~11.0.0"}}' > package.json
           fi
           
+          # 2. App.json yaratish (Xavfsizlik sozlamalari bilan)
           if [ ! -f "app.json" ]; then
-            echo '{"expo":{"name":"Managed Security","slug":"managed-security","version":"1.0.0","android":{"package":"com.managedsecurity.app"},"plugins":[["expo-build-properties",{"android":{"enableProguardInReleaseBuilds":true,"usesCleartextTraffic":false}}]]}}' > app.json
+            echo '{"expo":{"name":"Managed Security","slug":"managed-security","version":"1.0.0","orientation":"portrait","jsEngine":"hermes","android":{"package":"com.managedsecurity.app"},"plugins":[["expo-build-properties",{"android":{"enableProguardInReleaseBuilds":true,"usesCleartextTraffic":false}}]]}}' > app.json
+          fi
+
+          # 3. Kirish fayli (index.js) yaratish - Bundler adashmasligi uchun
+          if [ ! -f "index.js" ]; then
+            echo "import { registerRootComponent } from 'expo'; import App from './app/_layout'; registerRootComponent(App);" > index.js
+          fi
+
+          # 4. Babel konfiguratsiyasini yaratish (Bundle xatosini yo'qotadi)
+          if [ ! -f "babel.config.js" ]; then
+            echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
           fi
 
       - name: Install Base Dependencies
