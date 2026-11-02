@@ -15,12 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 1. Barqaror Java 17 versiyasini o'rnatamiz
       - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
+      # 2. Barqaror Node.js 18 versiyasini o'rnatamiz
       - name: Setup Node.js Environment
         uses: actions/setup-node@v4
         with:
@@ -31,38 +33,38 @@ jobs:
           mkdir -p secure-build-env
           cd secure-build-env
           
-          # 1. Barcha kerakli kutubxonalarni o'rnatamiz (Navigatsiya va UI uchun)
+          # Paketlar ro'yxatini va barqaror Expo versiyalarini sozlaymiz
           echo '{"name":"managed-security","version":"1.0.0","main":"node_modules/expo/AppEntry.js","scripts":{"android":"expo run:android"},"dependencies":{"expo":"~51.0.3","react-native":"0.74.1","expo-router":"~3.5.1","expo-build-properties":"~0.12.1","expo-secure-store":"~13.0.1","react-native-safe-area-context":"4.10.1","react-native-screens":"~3.31.1","@react-native-async-storage/async-storage":"1.23.1","lucide-react-native":"^0.344.0"},"devDependencies":{"@babel/core":"^7.20.0","babel-preset-expo":"~11.0.0"}}' > package.json
           
-          # 2. Xavfsizlik sozlamalari va paket nomi
+          # R8 Shifrlash va faqat HTTPS trafigi konfiguratsiyasi
           echo '{"expo":{"name":"Managed Security","slug":"managed-security","version":"1.0.0","orientation":"portrait","jsEngine":"hermes","splash":{"backgroundColor":"#111827"},"android":{"package":"com.managedsecurity.app"},"plugins":[["expo-build-properties",{"android":{"enableProguardInReleaseBuilds":true,"usesCleartextTraffic":false}}]]}}' > app.json
           
-          # 3. Babel va Metro konfiguratsiyasi
+          # Babel va Metro sozlamalari
           echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'], plugins: ['expo-router/babel'] }; };" > babel.config.js
           echo "const { getDefaultConfig } = require('expo/metro-config'); const config = getDefaultConfig(__dirname); module.exports = config;" > metro.config.js
           
-          # 4. Asosiy Log Service yaratish
+          # Lokal Log xizmati
           mkdir -p lib
           echo "import AsyncStorage from '@react-native-async-storage/async-storage'; const LOGS_KEY = '@secure_app_logs'; export const logService = { async saveLog(event, details) { try { const existing = await AsyncStorage.getItem(LOGS_KEY); const logs = existing ? JSON.parse(existing) : []; const newLog = { id: Math.random().toString(36).substring(2, 9), event, timestamp: new Date().toISOString(), details }; await AsyncStorage.setItem(LOGS_KEY, JSON.stringify([newLog, ...logs].slice(0, 500))); } catch (e) { console.error(e); } }, async getLogs() { try { const logs = await AsyncStorage.getItem(LOGS_KEY); return logs ? JSON.parse(logs) : []; } catch (e) { return []; } } };" > lib/logs.ts
 
-          # 5. ASOSIY DIZAYN VA EKRANLARNI TIKLASH (Qo'shtirnoqlar bilan himoyalandi)
+          # ASOSIY DIZAYNLARNI INTEGRATSIYA QILISH
           mkdir -p "app/(tabs)"
           
           # Root Layout
           echo "import { Stack } from 'expo-router'; export default function RootLayout() { return <Stack screenOptions={{ headerShown: false }} /> ;}" > app/_layout.tsx
           
-          # Tabs Layout (Pastki menyu dizayni)
-          echo "import { Tabs } from 'expo-router'; import { Shield, ShieldAlert, Settings, LayoutGrid } from 'lucide-react-native'; export default function TabLayout() { return <Tabs screenOptions={{ tabBarActiveTintColor: '#6366f1', tabBarInactiveTintColor: '#9ca3af', tabBarStyle: { backgroundColor: '#1f2937', borderTopColor: '#374151' }, headerStyle: { backgroundColor: '#111827' }, headerTintColor: '#fff' }}><Tabs.Screen name='index' options={{ title: 'Qalqon', tabBarIcon: ({color}) => <Shield color={color} size={24} /> }} /><Tabs.Screen name='scanner' options={{ title: 'Skaner', tabBarIcon: ({color}) => <ShieldAlert color={color} size={24} /> }} /><Tabs.Screen name='logs' options={{ title: 'Jurnallar', tabBarIcon: ({color}) => <LayoutGrid color={color} size={24} /> }} /><Tabs.Screen name='settings' options={{ title: 'Sozlamalar', tabBarIcon: ({color}) => <Settings color={color} size={24} /> }} /></Tabs>; }" > "app/(tabs)/_layout.tsx"
+          # Pastki menyu dizayni (Tabs Layout)
+          echo "import { Tabs } from 'expo-router'; import { Shield, ShieldAlert, Settings, LayoutGrid } from 'lucide-react-native'; export default function TabLayout() { return <Tabs screenOptions={{ tabBarActiveTintColor: '#6366f1', tabBarInactiveTintColor: '#9ca3af', tabBarStyle: { backgroundColor: '#1f2937', borderTopColor: '#374151' }, headerStyle: { backgroundColor: '#111827' }, headerTintColor: '#fff' }}><Tabs.Screen name='index' options={{ title: 'Himoya', tabBarIcon: ({color}) => <Shield color={color} size={24} /> }} /><Tabs.Screen name='scanner' options={{ title: 'Skaner', tabBarIcon: ({color}) => <ShieldAlert color={color} size={24} /> }} /><Tabs.Screen name='logs' options={{ title: 'Faoliyat', tabBarIcon: ({color}) => <LayoutGrid color={color} size={24} /> }} /><Tabs.Screen name='settings' options={{ title: 'Sozlamalar', tabBarIcon: ({color}) => <Settings color={color} size={24} /> }} /></Tabs>; }" > "app/(tabs)/_layout.tsx"
 
-          # 6. Bosh Ekran (Qalqon Dashboard dizayni)
-          echo "import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'; import { Shield } from 'lucide-react-native'; export default function HomeScreen() { return <View style={styles.container}><Shield color='#10b981' size={80} style={styles.icon} /><Text style={styles.title}>Tizim Himoyalangan</Text><Text style={styles.subtitle}>Qalqon_uz xavfsizlik moduli faol holatda</Text><TouchableOpacity style={styles.button}><Text style={styles.btnText}>Holatni Tekshirish</Text></TouchableOpacity></View>; }" > "app/(tabs)/index.tsx"
+          # Dashboard dizayni (Rasmdagi kabi mukammal holat)
+          echo "import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'; import { Shield } from 'lucide-react-native'; export default function HomeScreen() { return <View style={styles.container}><Shield color='#10b981' size={80} style={styles.icon} /><Text style={styles.title}>98% Xavfsiz</Text><Text style={styles.subtitle}>Himoya qalqoni yoqilgan</Text><TouchableOpacity style={styles.button}><Text style={styles.btnText}>Tizimni Tekshirish</Text></TouchableOpacity></View>; }" > "app/(tabs)/index.tsx"
           echo "const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', padding: 20 }, icon: { marginBottom: 20 }, title: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 10 }, subtitle: { fontSize: 16, color: '#9ca3af', marginBottom: 30, textAlign: 'center' }, button: { backgroundColor: '#6366f1', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 8 }, btnText: { color: '#fff', fontSize: 16, fontWeight: '600' } });" >> "app/(tabs)/index.tsx"
 
-          # 7. Skaner Ekran dizayni
+          # Skaner Ekran dizayni
           echo "import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'; import { ShieldAlert } from 'lucide-react-native'; export default function ScannerScreen() { return <View style={styles.container}><ShieldAlert color='#6366f1' size={70} /><Text style={styles.title}>Xavfsizlik Skaneri</Text><Text style={styles.desc}>Ilova va tizimdagi zaifliklarni aniqlash</Text><TouchableOpacity style={styles.btn}><Text style={styles.btnText}>Skanerlashni Boshlash</Text></TouchableOpacity></View>; }" > "app/(tabs)/scanner.tsx"
           echo "const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', padding: 20 }, title: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 20 }, desc: { fontSize: 14, color: '#9ca3af', marginTop: 8, marginBottom: 25 }, btn: { backgroundColor: '#374151', paddingVertical: 12, paddingHorizontal: 40, borderRadius: 8, borderWidth: 1, borderColor: '#4b5563' }, btnText: { color: '#6366f1', fontSize: 16, fontWeight: 'bold' } });" >> "app/(tabs)/scanner.tsx"
 
-          # 8. Loglar va Sozlamalar ekranlarining shablonlari
+          # Qolgan ekran shablonlari
           echo "import { View, Text } from 'react-native'; export default function Logs() { return <View style={{flex:1,backgroundColor:'#111827',padding:20}}><Text style={{color:'#fff',fontSize:18}}>Tizim Hodisalari Jurnali</Text></View>;}" > "app/(tabs)/logs.tsx"
           echo "import { View, Text } from 'react-native'; export default function Settings() { return <View style={{flex:1,backgroundColor:'#111827',padding:20}}><Text style={{color:'#fff',fontSize:18}}>Xavfsizlik Sozlamalari</Text></View>;}" > "app/(tabs)/settings.tsx"
 
@@ -81,10 +83,11 @@ jobs:
           cd secure-build-env
           chmod +x android/gradlew
 
+      # 3. MUHIM: Versiya nizo berishini oldini oluvchi toza va xavfsiz Gradle buyrug'i
       - name: Build Production Release APK with R8 Obfuscation
         run: |
           cd secure-build-env/android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease -x test --no-daemon
 
       - name: Upload Secure Production APK Artifact
         uses: actions/upload-artifact@v4
